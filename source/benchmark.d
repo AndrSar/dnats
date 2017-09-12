@@ -1,4 +1,4 @@
-import dnatsclient;
+import dnats.dnatsclient;
 
 import core.thread;
 import core.atomic;
@@ -6,7 +6,7 @@ import std.stdio;
 import std.conv : to;
 import std.datetime.stopwatch;
 
-shared size_t messagesReceived = 0;
+
 immutable uint messagesCount = 100000;
 
 int main()
@@ -23,7 +23,7 @@ int main()
         });
 
         Thread.sleep(dur!("msecs")(80)); // Wait for subscriber
-        client.runIOLoop(()=>client.totalMessagesSent >= messagesCount);
+        client.runIOLoop(()=>client.totalMessagesSent == messagesCount);
         
         writeln("Total messages count sent: ", client.totalMessagesSent);
     });
@@ -39,7 +39,7 @@ int main()
         }
 
         client.connect(&onConnect);
-        client.runIOLoop(()=>client.totalMessagesReceived >= messagesCount);
+        client.runIOLoop(()=>client.totalMessagesReceived == messagesCount);
     });
 
     clientBThread.start();

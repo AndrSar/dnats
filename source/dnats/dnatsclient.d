@@ -37,7 +37,7 @@
  * Authors: Andrey Lifanov.
  */
 
-module dnatsclient;
+module dnats.dnatsclient;
 
 enum __version__ = "1.0.0-beta";
 
