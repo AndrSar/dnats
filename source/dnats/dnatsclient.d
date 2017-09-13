@@ -28,7 +28,7 @@
 */
 
 /**
- * D programming language asynchronous client library for NATS Server.
+ * An asynchronous client library for NATS Server.
  * From $(http://nats.io/, NATS official site):
  *     NATS Server is a simple, high performance open source messaging system
  *     for cloud native applications, IoT messaging, and microservices architectures.
@@ -124,7 +124,7 @@ unittest
 
 unittest
 {
-    __gshared bool replyReceived = false;
+    shared bool replyReceived = false;
 
     auto clientRequestThread = new Thread({
         auto client = new NATSClient();
@@ -192,7 +192,6 @@ final class NATSProtocolInfoMessage : NATSProtocolIncomingMessage
     bool authRequired;
     bool sslRequired;
     long maxPayload;
-    string[] connectUrls;
 
     private this()
     {
@@ -314,14 +313,32 @@ final class NATSProtocolPongMessage : NATSProtocolOutgoingMessage, NATSProtocolI
 
 final class NATSProtocolConnectMessage : NATSProtocolOutgoingMessage
 {
-    bool verbose = false;
-    bool pedantic = false;
-    string name = "DNatsClient";
-    string lang = "D";
-    string _version = "1.0.0";
-    int protocol = 0;
-    string user;
-    string pass;
+    this()
+    {
+    }
+
+    this(string name)
+    {
+        this.name = name;
+    }
+
+    void setUserPass(string user, string pass)
+    {
+        this.user = user;
+        this.pass = pass;
+    }
+
+    @property
+    bool pedantic() const
+    {
+        return _pedantic;
+    }
+
+    @property
+    void pedantic(bool state)
+    {
+        _pedantic = state;
+    }
 
     override string type() const
     {
@@ -348,6 +365,42 @@ final class NATSProtocolConnectMessage : NATSProtocolOutgoingMessage
         buffer.write(j.toString());
         buffer.write("\r\n");
     }
+
+private:
+    bool verbose = false;
+    bool _pedantic = false;
+    string name = "DNatsClient";
+    string lang = "D";
+    string _version = __version__;
+    int protocol = 0;
+    string user;
+    string pass;
+}
+
+
+unittest
+{
+    import std.algorithm : canFind, startsWith, endsWith;
+    
+    OutBuffer outBuffer = new OutBuffer;
+    auto options = new NATSProtocolConnectMessage("Client");
+    options.setUserPass("user", "pass");
+    options._version = "1.0.0";
+    options.serialize(outBuffer);
+
+    const(char)[] str = cast(char[])outBuffer.toBytes();
+
+    assert(startsWith(str, "CONNECT "));
+    assert(endsWith(str, "\r\n"));
+
+    assert(canFind(str,"\"verbose\":false"));
+    assert(canFind(str,"\"pedantic\":false"));
+    assert(canFind(str,"\"user\":\"user\""));
+    assert(canFind(str,"\"pass\":\"pass\""));
+    assert(canFind(str,"\"name\":\"Client\""));
+    assert(canFind(str,"\"lang\":\"D\""));
+    assert(canFind(str,"\"version\":\"1.0.0\""));
+    assert(canFind(str,"\"protocol\":0"));
 }
 
 
@@ -1246,6 +1299,11 @@ private:
 
 
 void runIOLoop(NATSClient[] clients, bool delegate() stopCondition, in Duration sleepDuration = msecs(5))
+in
+{
+    assert(!clients.empty);
+}
+body
 {
     import std.datetime.stopwatch;
 
